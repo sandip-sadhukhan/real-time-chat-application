@@ -1,5 +1,5 @@
 import { Button, Paper, TextField, Typography } from "@mui/material";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import Message from "../components/message";
 import { w3cwebsocket as W3CWebsocket } from "websocket";
 
@@ -13,20 +13,40 @@ const Chat = ({ state, setState }) => {
   useEffect(() => {
     client.onopen = () => {
       console.log("Websocket Connected");
+      client.send(
+        JSON.stringify({
+          command: 'fetch_messages'
+        })
+      )
     };
     client.onmessage = (_message) => {
       let dataFromServer = JSON.parse(_message.data);
       if (dataFromServer) {
-        setState((state) => ({
-          ...state,
-          messages: [
-            ...state.messages,
-            {
-              username: dataFromServer.username,
-              message: dataFromServer.message,
-            },
-          ]
-        }));
+        if(dataFromServer['command'] === 'new_message'){
+          setState((state) => ({
+            ...state,
+            messages: [
+              ...state.messages,
+              {
+                username: dataFromServer.message.username,
+                message: dataFromServer.message.message,
+              },
+            ]
+          }));
+        }else {
+          let messages = dataFromServer.messages;
+          let messagesFormat = []
+          messages.forEach(message => {
+            messagesFormat.push({
+              username: message.username,
+              message: message.message
+            })
+          })
+          setState((state) => ({
+            ...state,
+            messages: messagesFormat
+          }))
+        }
       }
     };
   }, []);
@@ -35,9 +55,9 @@ const Chat = ({ state, setState }) => {
     e.preventDefault();
     client.send(
       JSON.stringify({
-        type: "message",
         message: message,
         username: state.username,
+        command: 'new_message'
       })
     );
     setMessage("");
