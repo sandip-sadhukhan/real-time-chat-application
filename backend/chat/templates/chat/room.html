@@ -19,10 +19,30 @@
         "ws://" + window.location.host + "/ws/chat/" + roomName + "/"
       );
 
+      chatSocket.onopen = () => {
+        // get all the messages
+        chatSocket.send(
+          JSON.stringify({
+            command: "fetch_messages",
+          })
+        );
+      };
+
       chatSocket.onmessage = function (e) {
         const data = JSON.parse(e.data);
-        document.querySelector("#chat-log").value +=
-          data.username + " : " + data.message + "\n";
+        if (data["command"] === "new_message") {
+          const messageObj = data.message;
+          // console.log(data, messageObj);
+          document.querySelector("#chat-log").value +=
+            messageObj.username + " : " + messageObj.message + "\n";
+        } else {
+          // fetch messages
+          const messageObjs = data.messages;
+          messageObjs.forEach((messageObj) => {
+            document.querySelector("#chat-log").value +=
+              messageObj.username + " : " + messageObj.message + "\n";
+          });
+        }
       };
 
       chatSocket.onclose = function (e) {
@@ -48,6 +68,7 @@
           JSON.stringify({
             message: message,
             username: username,
+            command: "new_message",
           })
         );
         messageInputDom.value = "";
